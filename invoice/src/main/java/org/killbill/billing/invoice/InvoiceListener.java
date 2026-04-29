@@ -346,12 +346,7 @@ public class InvoiceListener extends RetryableService implements InvoiceListener
         handleEvent(event);
     }
 
-    /**
-     * Called when the retry schedule is exhausted for a notification event.
-     * Subclasses of RetryableService can override this hook to take remedial action.
-     * Note: this method is intended to be called by RetryableService once killbill-commons adds the hook.
-     * searchKey1 = accountRecordId, searchKey2 = tenantRecordId.
-     */
+    @Override
     public void onRetriesExhausted(final QueueEvent event, final Long searchKey1, final Long searchKey2) {
         try {
             final InternalCallContext context = internalCallContextFactory.createInternalCallContext(searchKey2, searchKey1, "InvoiceRetryExhausted", CallOrigin.INTERNAL, UserType.SYSTEM, null);

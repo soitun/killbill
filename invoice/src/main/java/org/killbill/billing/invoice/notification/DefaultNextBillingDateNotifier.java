@@ -117,11 +117,8 @@ public class DefaultNextBillingDateNotifier extends RetryableService implements 
         listener.handleEventForInvoiceNotification(eventDateTime, userToken, accountRecordId, tenantRecordId);
     }
 
-    /**
-     * Delegates retry exhaustion handling to the InvoiceListener.
-     * Note: this method is intended to be called by RetryableService once killbill-commons adds the hook.
-     */
-    public void onRetriesExhausted(final QueueEvent event, final Long searchKey1, final Long searchKey2) {
+    @Override
+    protected void onRetriesExhausted(final QueueEvent event, final Long searchKey1, final Long searchKey2) {
         listener.onRetriesExhausted(event, searchKey1, searchKey2);
     }
 }
