@@ -216,18 +216,21 @@ public class TestHardenCatalogPlugin extends TestIntegrationBase {
         public VersionedPluginCatalog getVersionedPluginCatalog(final Iterable<PluginProperty> properties, final TenantContext tenantContext) {
             Assert.assertNotNull(versionedCatalog, "test did not initialize plugin catalog");
 
-            // Will throw once when we transition from 1 -> 0
-            if (throwOnZeroCounter > 0) {
-                throwOnZeroCounter--;
-                if (throwOnZeroCounter == 0) {
-                    // Re-increment for next round if we want to keep failing
-                    if (!throwOnce) {
-                        throwOnZeroCounter++;
-                    }
-                    if (retryPeriod != null) {
-                        throw new CatalogPluginApiRetryException(List.of(retryPeriod));
-                    } else {
-                        throw new RuntimeException("****  CATALOG PLUGIN RUNTIME EXCEPTION ****");
+            // Synchronized to protect the compound read-decrement-check-increment sequence from concurrent catalog lookups
+            synchronized (this) {
+                // Will throw once when we transition from 1 -> 0
+                if (throwOnZeroCounter > 0) {
+                    throwOnZeroCounter--;
+                    if (throwOnZeroCounter == 0) {
+                        // Re-increment for next round if we want to keep failing
+                        if (!throwOnce) {
+                            throwOnZeroCounter++;
+                        }
+                        if (retryPeriod != null) {
+                            throw new CatalogPluginApiRetryException(List.of(retryPeriod));
+                        } else {
+                            throw new RuntimeException("****  CATALOG PLUGIN RUNTIME EXCEPTION ****");
+                        }
                     }
                 }
             }
