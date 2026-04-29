@@ -485,6 +485,7 @@ public class InvoiceDispatcher {
             return Collections.emptyList();
         } catch (final InvoiceApiException e) {
             if (e.getCode() == ErrorCode.INVOICE_PLUGIN_API_ABORTED.getCode()) {
+                log.info("Invoice generation aborted by plugin for accountId='{}', targetDate='{}'", accountId, inputTargetDate);
                 return Collections.emptyList();
             }
 
@@ -708,6 +709,7 @@ public class InvoiceDispatcher {
         invoiceTimings.put(InvoiceTiming.PLUGINS_PRIOR_CALL, System.nanoTime() - startNano);
 
         if (priorCallResult.getRescheduleDate() != null) {
+            log.info("Invoice generation rescheduled by plugin for accountId='{}', targetDate='{}', rescheduled to '{}'", accountId, originalTargetDate, priorCallResult.getRescheduleDate());
             final FutureAccountNotifications futureAccountNotifications = createNextFutureNotificationDate(priorCallResult.getRescheduleDate(), billingEvents, internalCallContext);
             setFutureNotifications(account, futureAccountNotifications, internalCallContext);
             return null;

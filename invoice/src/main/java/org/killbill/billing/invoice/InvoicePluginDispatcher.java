@@ -199,16 +199,21 @@ public class InvoicePluginDispatcher {
 
         Iterable<PluginProperty> inputPluginProperties = pluginProperties;
         for (final InvoicePluginApi invoicePlugin : invoicePlugins) {
-            if (isSuccess) {
-                final OnSuccessInvoiceResult res1 = invoicePlugin.onSuccessCall(invoiceContext, inputPluginProperties);
-                if (res1 != null && res1.getAdjustedPluginProperties() != null) {
-                    inputPluginProperties = res1.getAdjustedPluginProperties();
+            try {
+                if (isSuccess) {
+                    final OnSuccessInvoiceResult res1 = invoicePlugin.onSuccessCall(invoiceContext, inputPluginProperties);
+                    if (res1 != null && res1.getAdjustedPluginProperties() != null) {
+                        inputPluginProperties = res1.getAdjustedPluginProperties();
+                    }
+                } else {
+                    final OnFailureInvoiceResult res2 = invoicePlugin.onFailureCall(invoiceContext, inputPluginProperties);
+                    if (res2 != null && res2.getAdjustedPluginProperties() != null) {
+                        inputPluginProperties = res2.getAdjustedPluginProperties();
+                    }
                 }
-            } else {
-                final OnFailureInvoiceResult res2 = invoicePlugin.onFailureCall(invoiceContext, inputPluginProperties);
-                if (res2 != null && res2.getAdjustedPluginProperties() != null) {
-                    inputPluginProperties = res2.getAdjustedPluginProperties();
-                }
+            } catch (final RuntimeException e) {
+                log.warn("Invoice plugin {} threw an exception during {} call for targetDate='{}'",
+                         invoicePlugin, isSuccess ? "onSuccessCall" : "onFailureCall", targetDate, e);
             }
         }
     }
