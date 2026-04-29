@@ -194,7 +194,7 @@ public class InvoiceDispatcher {
         try {
             processAccount(false, accountId, null, null, false, true, Collections.emptyList(), internalCallContext);
         } catch (final InvoiceApiException e) {
-            log.warn("Failed to process BCD change for accountId='{}'", accountId, e);
+            log.warn("Failed to generate invoice for accountId='{}', BCD change processing failed", accountId, e);
         }
     }
 
@@ -220,7 +220,7 @@ public class InvoiceDispatcher {
 
             processSubscriptionStartRequestedDateWithLock(accountId, transition, context);
         } catch (final LockFailedException e) {
-            log.warn("Failed to process RequestedSubscriptionInternalEvent for accountId='{}'", accountId, e);
+            log.warn("Failed to generate invoice for accountId='{}', could not acquire lock", accountId, e);
             throw new QueueRetryException(e, TimeSpanConverter.toListPeriod(invoiceConfig.getRescheduleIntervalOnLock(context)));
         } finally {
             if (lock != null) {
@@ -691,7 +691,7 @@ public class InvoiceDispatcher {
         try {
             account = accountApi.getImmutableAccountDataById(accountId, internalCallContext);
         } catch (final AccountApiException e) {
-            log.error("Unable to generate invoice for accountId='{}', a future notification has NOT been recorded", accountId, e);
+            log.warn("Failed to generate invoice for accountId='{}', a future notification has NOT been recorded", accountId, e);
             long startNano = System.nanoTime();
             invoicePluginDispatcher.onFailureCall(originalTargetDate, null, accountInvoices.getInvoices(), false, isRescheduled, callContext, inputProperties, internalCallContext);
             invoiceTimings.put(InvoiceTiming.PLUGINS_COMPLETION_CALL, System.nanoTime() - startNano);
@@ -879,7 +879,7 @@ public class InvoiceDispatcher {
         try {
             account = accountApi.getImmutableAccountDataById(accountId, internalCallContext);
         } catch (final AccountApiException e) {
-            log.error("Unable to generate invoice for accountId='{}', a future notification has NOT been recorded", accountId, e);
+            log.warn("Failed to generate invoice for accountId='{}', a future notification has NOT been recorded", accountId, e);
             long startNano = System.nanoTime();
             invoicePluginDispatcher.onFailureCall(originalTargetDate, null, accountInvoices.getInvoices(), true, isRescheduled, callContext, inputProperties, internalCallContext);
             invoiceTimings.put(InvoiceTiming.PLUGINS_COMPLETION_CALL, System.nanoTime() - startNano);
@@ -1353,7 +1353,7 @@ public class InvoiceDispatcher {
 
             processParentInvoiceForInvoiceGenerationWithLock(childAccount, childInvoiceId, context);
         } catch (final LockFailedException e) {
-            log.warn("Failed to process parent invoice for parentAccountId='{}'", childAccount.getParentAccountId().toString(), e);
+            log.warn("Failed to generate invoice for parentAccountId='{}', could not acquire lock", childAccount.getParentAccountId().toString(), e);
             throw new QueueRetryException(e, TimeSpanConverter.toListPeriod(invoiceConfig.getRescheduleIntervalOnLock(context)));
         } finally {
             if (lock != null) {
@@ -1440,7 +1440,7 @@ public class InvoiceDispatcher {
 
             processParentInvoiceForAdjustmentsWithLock(childAccount, childInvoiceId, context);
         } catch (final LockFailedException e) {
-            log.warn("Failed to process parent invoice for parentAccountId='{}'", childAccount.getParentAccountId().toString(), e);
+            log.warn("Failed to generate invoice for parentAccountId='{}', could not acquire lock", childAccount.getParentAccountId().toString(), e);
             throw new QueueRetryException(e, TimeSpanConverter.toListPeriod(invoiceConfig.getRescheduleIntervalOnLock(context)));
         } finally {
             if (lock != null) {

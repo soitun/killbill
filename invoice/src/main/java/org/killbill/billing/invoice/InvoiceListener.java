@@ -113,10 +113,10 @@ public class InvoiceListener extends RetryableService implements InvoiceListener
                                                      final InternalCallContext context = internalCallContextFactory.createInternalCallContext(event.getSearchKey2(), event.getSearchKey1(), "SubscriptionBaseTransition", CallOrigin.INTERNAL, UserType.SYSTEM, event.getUserToken());
                                                      dispatcher.processSubscriptionForInvoiceGeneration(event, context);
                                                  } catch (final InvoiceApiException e) {
-                                                     log.warn("Unable to process event {}", event, e);
+                                                     log.warn("Failed to generate invoice for accountRecordId='{}', event='{}'", event.getSearchKey1(), event.getClass().getSimpleName(), e);
                                                      handleFailedInvoiceDispatch("SubscriptionBaseTransition", event.getSearchKey1(), event.getSearchKey2(), event.getUserToken(), e);
                                                  } catch (final RuntimeException e) {
-                                                     log.warn("Unable to process event {}", event, e);
+                                                     log.warn("Failed to generate invoice for accountRecordId='{}', event='{}'", event.getSearchKey1(), event.getClass().getSimpleName(), e);
                                                      handleFailedInvoiceDispatch("SubscriptionBaseTransition", event.getSearchKey1(), event.getSearchKey2(), event.getUserToken(), e);
                                                      throw e;
                                                  }
@@ -136,13 +136,13 @@ public class InvoiceListener extends RetryableService implements InvoiceListener
                                                      final UUID accountId = accountApi.getByRecordId(event.getSearchKey1(), context);
                                                      dispatcher.processAccountFromNotificationOrBusEvent(accountId, null, null, false, context);
                                                  } catch (final InvoiceApiException e) {
-                                                     log.warn("Unable to process event {}", event, e);
+                                                     log.warn("Failed to generate invoice for accountRecordId='{}', event='{}'", event.getSearchKey1(), event.getClass().getSimpleName(), e);
                                                      handleFailedInvoiceDispatch("SubscriptionBaseTransition", event.getSearchKey1(), event.getSearchKey2(), event.getUserToken(), e);
                                                  } catch (final AccountApiException e) {
-                                                     log.warn("Unable to process event {}", event, e);
+                                                     log.warn("Failed to generate invoice for accountRecordId='{}', event='{}'", event.getSearchKey1(), event.getClass().getSimpleName(), e);
                                                      handleFailedInvoiceDispatch("SubscriptionBaseTransition", event.getSearchKey1(), event.getSearchKey2(), event.getUserToken(), e);
                                                  } catch (final RuntimeException e) {
-                                                     log.warn("Unable to process event {}", event, e);
+                                                     log.warn("Failed to generate invoice for accountRecordId='{}', event='{}'", event.getSearchKey1(), event.getClass().getSimpleName(), e);
                                                      handleFailedInvoiceDispatch("SubscriptionBaseTransition", event.getSearchKey1(), event.getSearchKey2(), event.getUserToken(), e);
                                                      throw e;
                                                  }
@@ -162,13 +162,13 @@ public class InvoiceListener extends RetryableService implements InvoiceListener
                                                      }
 
                                                  } catch (final InvoiceApiException e) {
-                                                     log.warn("Unable to process event {}", event, e);
+                                                     log.warn("Failed to generate invoice for accountRecordId='{}', event='{}'", event.getSearchKey1(), event.getClass().getSimpleName(), e);
                                                      handleFailedInvoiceDispatch("CreateParentInvoice", event.getSearchKey1(), event.getSearchKey2(), event.getUserToken(), e);
                                                  } catch (final AccountApiException e) {
-                                                     log.warn("Unable to process event {}", event, e);
+                                                     log.warn("Failed to generate invoice for accountRecordId='{}', event='{}'", event.getSearchKey1(), event.getClass().getSimpleName(), e);
                                                      handleFailedInvoiceDispatch("CreateParentInvoice", event.getSearchKey1(), event.getSearchKey2(), event.getUserToken(), e);
                                                  } catch (final RuntimeException e) {
-                                                     log.warn("Unable to process event {}", event, e);
+                                                     log.warn("Failed to generate invoice for accountRecordId='{}', event='{}'", event.getSearchKey1(), event.getClass().getSimpleName(), e);
                                                      handleFailedInvoiceDispatch("CreateParentInvoice", event.getSearchKey1(), event.getSearchKey2(), event.getUserToken(), e);
                                                      throw e;
                                                  }
@@ -187,13 +187,13 @@ public class InvoiceListener extends RetryableService implements InvoiceListener
                                                          dispatcher.processParentInvoiceForAdjustments(account, event.getInvoiceId(), context);
                                                      }
                                                  } catch (final InvoiceApiException e) {
-                                                     log.warn("Unable to process event {}", event, e);
+                                                     log.warn("Failed to generate invoice for accountRecordId='{}', event='{}'", event.getSearchKey1(), event.getClass().getSimpleName(), e);
                                                      handleFailedInvoiceDispatch("AdjustParentInvoice", event.getSearchKey1(), event.getSearchKey2(), event.getUserToken(), e);
                                                  } catch (final AccountApiException e) {
-                                                     log.warn("Unable to process event {}", event, e);
+                                                     log.warn("Failed to generate invoice for accountRecordId='{}', event='{}'", event.getSearchKey1(), event.getClass().getSimpleName(), e);
                                                      handleFailedInvoiceDispatch("AdjustParentInvoice", event.getSearchKey1(), event.getSearchKey2(), event.getUserToken(), e);
                                                  } catch (final RuntimeException e) {
-                                                     log.warn("Unable to process event {}", event, e);
+                                                     log.warn("Failed to generate invoice for accountRecordId='{}', event='{}'", event.getSearchKey1(), event.getClass().getSimpleName(), e);
                                                      handleFailedInvoiceDispatch("AdjustParentInvoice", event.getSearchKey1(), event.getSearchKey2(), event.getUserToken(), e);
                                                      throw e;
                                                  }
@@ -212,7 +212,7 @@ public class InvoiceListener extends RetryableService implements InvoiceListener
                                                      final InternalCallContext context = internalCallContextFactory.createInternalCallContext(event.getSearchKey2(), event.getSearchKey1(), "SubscriptionBaseTransition", CallOrigin.INTERNAL, UserType.SYSTEM, event.getUserToken());
                                                      dispatcher.processSubscriptionStartRequestedDate(event, context);
                                                  } catch (final RuntimeException e) {
-                                                     log.warn("Unable to process event {}", event, e);
+                                                     log.warn("Failed to generate invoice for accountRecordId='{}', event='{}'", event.getSearchKey1(), event.getClass().getSimpleName(), e);
                                                      handleFailedInvoiceDispatch("SubscriptionBaseTransition", event.getSearchKey1(), event.getSearchKey2(), event.getUserToken(), e);
                                                      throw e;
                                                  }
@@ -230,7 +230,7 @@ public class InvoiceListener extends RetryableService implements InvoiceListener
                                                              final InternalCallContext context = internalCallContextFactory.createInternalCallContext(event.getSearchKey2(), event.getSearchKey1(), "AccountBCDChange", CallOrigin.INTERNAL, UserType.SYSTEM, event.getUserToken());
                                                              dispatcher.processAccountBCDChange(event.getAccountId(), context);
                                                          } catch (final RuntimeException e) {
-                                                             log.warn("Unable to process event {}", event, e);
+                                                             log.warn("Failed to generate invoice for accountRecordId='{}', event='{}'", event.getSearchKey1(), event.getClass().getSimpleName(), e);
                                                              handleFailedInvoiceDispatch("AccountBCDChange", event.getSearchKey1(), event.getSearchKey2(), event.getUserToken(), e);
                                                              throw e;
                                                          }
@@ -305,7 +305,7 @@ public class InvoiceListener extends RetryableService implements InvoiceListener
         try {
             dispatcher.processSubscriptionForInvoiceGeneration(context.toLocalDate(eventDateTime), isRescheduled, context);
         } catch (final InvoiceApiException e) {
-            log.warn("Unable to process next billing date event, eventDateTime='{}'", eventDateTime, e);
+            log.warn("Failed to generate invoice for accountRecordId='{}', eventDateTime='{}'", accountRecordId, eventDateTime, e);
         }
     }
 
@@ -314,7 +314,7 @@ public class InvoiceListener extends RetryableService implements InvoiceListener
         try {
             dispatcher.processSubscriptionForInvoiceNotification(context.toLocalDate(eventDateTime), context);
         } catch (final InvoiceApiException e) {
-            log.warn("Unable to process event for invoice notification eventDateTime='{}'", eventDateTime, e);
+            log.warn("Failed to generate invoice for accountRecordId='{}', eventDateTime='{}'", accountRecordId, eventDateTime, e);
         }
     }
 
@@ -335,7 +335,7 @@ public class InvoiceListener extends RetryableService implements InvoiceListener
         } catch (final InvoiceApiException e) {
             // In case we commit parent invoice earlier we expect to see an INVOICE_INVALID_STATUS status
             if (ErrorCode.INVOICE_INVALID_STATUS.getCode() != e.getCode()) {
-                log.error(e.getMessage());
+                log.warn("Failed to commit parent invoice for invoiceId='{}'", invoiceId, e);
             }
         }
     }
