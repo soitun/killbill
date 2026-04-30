@@ -188,7 +188,7 @@ public class InvoicePluginDispatcher {
                                   final CallContext callContext,
                                   final Iterable<PluginProperty> pluginProperties,
                                   final InternalTenantContext internalTenantContext) {
-        final Collection<InvoicePluginApi> invoicePlugins = getInvoicePlugins(internalTenantContext).values();
+        final Map<String, InvoicePluginApi> invoicePlugins = getInvoicePlugins(internalTenantContext);
         if (invoicePlugins.isEmpty()) {
             return;
         }
@@ -198,7 +198,9 @@ public class InvoicePluginDispatcher {
         final InvoiceContext invoiceContext = new DefaultInvoiceContext(targetDate, clonedInvoice, existingInvoices, isDryRun, isRescheduled, callContext);
 
         Iterable<PluginProperty> inputPluginProperties = pluginProperties;
-        for (final InvoicePluginApi invoicePlugin : invoicePlugins) {
+        for (final Entry<String, InvoicePluginApi> entry : invoicePlugins.entrySet()) {
+            final String invoicePluginName = entry.getKey();
+            final InvoicePluginApi invoicePlugin = entry.getValue();
             try {
                 if (isSuccess) {
                     final OnSuccessInvoiceResult res1 = invoicePlugin.onSuccessCall(invoiceContext, inputPluginProperties);
@@ -213,7 +215,7 @@ public class InvoicePluginDispatcher {
                 }
             } catch (final RuntimeException e) {
                 log.warn("Invoice plugin {} threw an exception during {} call for targetDate='{}'",
-                         invoicePlugin, isSuccess ? "onSuccessCall" : "onFailureCall", targetDate, e);
+                         invoicePluginName, isSuccess ? "onSuccessCall" : "onFailureCall", targetDate, e);
             }
         }
     }
