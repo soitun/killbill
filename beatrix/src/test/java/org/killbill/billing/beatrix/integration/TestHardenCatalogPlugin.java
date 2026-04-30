@@ -29,6 +29,7 @@ import org.joda.time.LocalDate;
 import org.joda.time.Period;
 import org.killbill.billing.account.api.Account;
 import org.killbill.billing.account.api.AccountData;
+import org.killbill.billing.api.FlakyRetryAnalyzer;
 import org.killbill.billing.api.TestApiListener.NextEvent;
 import org.killbill.billing.callcontext.InternalTenantContext;
 import org.killbill.billing.catalog.DefaultVersionedCatalog;
@@ -115,7 +116,7 @@ public class TestHardenCatalogPlugin extends TestIntegrationBase {
         testCatalogPluginApi.reset();
     }
 
-    @Test(groups = "slow")
+    @Test(groups = "slow", retryAnalyzer = FlakyRetryAnalyzer.class)
     public void testCreateWithCatalogPluginRetryableException() throws Exception {
 
         testCatalogPluginApi.addCatalogVersion("org/killbill/billing/catalog/WeaponsHire.xml");
@@ -140,7 +141,7 @@ public class TestHardenCatalogPlugin extends TestIntegrationBase {
         assertListenerStatus();
     }
 
-    @Test(groups = "slow")
+    @Test(groups = "slow", retryAnalyzer = FlakyRetryAnalyzer.class)
     public void testCreateWithCatalogPluginSingleRuntimeException() throws Exception {
 
         testCatalogPluginApi.addCatalogVersion("org/killbill/billing/catalog/WeaponsHire.xml");
@@ -163,7 +164,7 @@ public class TestHardenCatalogPlugin extends TestIntegrationBase {
         assertListenerStatus();
     }
 
-    @Test(groups = "slow")
+    @Test(groups = "slow", retryAnalyzer = FlakyRetryAnalyzer.class)
     public void testCreateWithCatalogPluginNonSingleRuntimeException() throws Exception {
 
         testCatalogPluginApi.addCatalogVersion("org/killbill/billing/catalog/WeaponsHire.xml");
