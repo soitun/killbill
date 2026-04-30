@@ -47,7 +47,6 @@ import org.killbill.billing.subscription.api.SubscriptionBaseTransitionType;
 import org.killbill.billing.util.callcontext.CallOrigin;
 import org.killbill.billing.util.callcontext.InternalCallContextFactory;
 import org.killbill.billing.util.callcontext.UserType;
-import org.killbill.billing.util.config.definition.InvoiceConfig;
 import org.killbill.billing.util.optimizer.BusDispatcherOptimizer;
 import org.killbill.clock.Clock;
 import org.killbill.commons.eventbus.AllowConcurrentEvents;
@@ -72,7 +71,6 @@ public class InvoiceListener extends RetryableService implements InvoiceListener
     private final AccountInternalApi accountApi;
     private final InvoiceDispatcher dispatcher;
     private final InternalCallContextFactory internalCallContextFactory;
-    private final InvoiceConfig invoiceConfig;
     private final InvoiceInternalApi invoiceApi;
     private final ParkedAccountsManager parkedAccountsManager;
     private final RetryableSubscriber retryableSubscriber;
@@ -84,7 +82,6 @@ public class InvoiceListener extends RetryableService implements InvoiceListener
                            final InternalCallContextFactory internalCallContextFactory,
                            final InvoiceDispatcher dispatcher,
                            final InvoiceInternalApi invoiceApi,
-                           final InvoiceConfig invoiceConfig,
                            final ParkedAccountsManager parkedAccountsManager,
                            final NotificationQueueService notificationQueueService,
                            final BusDispatcherOptimizer busDispatcherOptimizer,
@@ -93,7 +90,6 @@ public class InvoiceListener extends RetryableService implements InvoiceListener
         this.accountApi = accountApi;
         this.dispatcher = dispatcher;
         this.internalCallContextFactory = internalCallContextFactory;
-        this.invoiceConfig = invoiceConfig;
         this.invoiceApi = invoiceApi;
         this.parkedAccountsManager = parkedAccountsManager;
         this.busDispatcherOptimizer = busDispatcherOptimizer;
@@ -114,10 +110,8 @@ public class InvoiceListener extends RetryableService implements InvoiceListener
                                                      dispatcher.processSubscriptionForInvoiceGeneration(event, context);
                                                  } catch (final InvoiceApiException e) {
                                                      log.warn("Failed to generate invoice for accountRecordId='{}', event='{}'", event.getSearchKey1(), event.getClass().getSimpleName(), e);
-                                                     handleFailedInvoiceDispatch("SubscriptionBaseTransition", event.getSearchKey1(), event.getSearchKey2(), event.getUserToken(), e);
                                                  } catch (final RuntimeException e) {
                                                      log.warn("Failed to generate invoice for accountRecordId='{}', event='{}'", event.getSearchKey1(), event.getClass().getSimpleName(), e);
-                                                     handleFailedInvoiceDispatch("SubscriptionBaseTransition", event.getSearchKey1(), event.getSearchKey2(), event.getUserToken(), e);
                                                      throw e;
                                                  }
                                              }
@@ -137,13 +131,11 @@ public class InvoiceListener extends RetryableService implements InvoiceListener
                                                      dispatcher.processAccountFromNotificationOrBusEvent(accountId, null, null, false, context);
                                                  } catch (final InvoiceApiException e) {
                                                      log.warn("Failed to generate invoice for accountRecordId='{}', event='{}'", event.getSearchKey1(), event.getClass().getSimpleName(), e);
-                                                     handleFailedInvoiceDispatch("SubscriptionBaseTransition", event.getSearchKey1(), event.getSearchKey2(), event.getUserToken(), e);
                                                  } catch (final AccountApiException e) {
-                                                     log.warn("Failed to generate invoice for accountRecordId='{}', event='{}'", event.getSearchKey1(), event.getClass().getSimpleName(), e);
-                                                     handleFailedInvoiceDispatch("SubscriptionBaseTransition", event.getSearchKey1(), event.getSearchKey2(), event.getUserToken(), e);
+                                                     // AccountApiException here means the account could not be fetched before invoicing; log with recordId as accountId is unavailable
+                                                     log.warn("Failed to generate invoice for accountRecordId='{}', event='{}', account does not seem to exist", event.getSearchKey1(), event.getClass().getSimpleName(), e);
                                                  } catch (final RuntimeException e) {
                                                      log.warn("Failed to generate invoice for accountRecordId='{}', event='{}'", event.getSearchKey1(), event.getClass().getSimpleName(), e);
-                                                     handleFailedInvoiceDispatch("SubscriptionBaseTransition", event.getSearchKey1(), event.getSearchKey2(), event.getUserToken(), e);
                                                      throw e;
                                                  }
                                              }
@@ -153,6 +145,8 @@ public class InvoiceListener extends RetryableService implements InvoiceListener
                                              @Override
                                              public void run(final InvoiceCreationInternalEvent event) {
                                                  try {
+                                                     // If this fail, technically we should park account when isParkAccountsOnAllExceptions is set but 
+                                                     // since we can't extract account, there is nothing to park.
                                                      final InternalCallContext context = internalCallContextFactory.createInternalCallContext(event.getSearchKey2(), event.getSearchKey1(), "CreateParentInvoice", CallOrigin.INTERNAL, UserType.SYSTEM, event.getUserToken());
                                                      final Account account = accountApi.getAccountById(event.getAccountId(), context);
 
@@ -163,13 +157,11 @@ public class InvoiceListener extends RetryableService implements InvoiceListener
 
                                                  } catch (final InvoiceApiException e) {
                                                      log.warn("Failed to generate invoice for accountRecordId='{}', event='{}'", event.getSearchKey1(), event.getClass().getSimpleName(), e);
-                                                     handleFailedInvoiceDispatch("CreateParentInvoice", event.getSearchKey1(), event.getSearchKey2(), event.getUserToken(), e);
                                                  } catch (final AccountApiException e) {
-                                                     log.warn("Failed to generate invoice for accountRecordId='{}', event='{}'", event.getSearchKey1(), event.getClass().getSimpleName(), e);
-                                                     handleFailedInvoiceDispatch("CreateParentInvoice", event.getSearchKey1(), event.getSearchKey2(), event.getUserToken(), e);
+                                                     // AccountApiException here means the account could not be fetched before invoicing; log with recordId as accountId is unavailable
+                                                     log.warn("Failed to generate invoice for accountRecordId='{}', event='{}', account does not seem to exist", event.getSearchKey1(), event.getClass().getSimpleName(), e);
                                                  } catch (final RuntimeException e) {
                                                      log.warn("Failed to generate invoice for accountRecordId='{}', event='{}'", event.getSearchKey1(), event.getClass().getSimpleName(), e);
-                                                     handleFailedInvoiceDispatch("CreateParentInvoice", event.getSearchKey1(), event.getSearchKey2(), event.getUserToken(), e);
                                                      throw e;
                                                  }
                                              }
@@ -188,13 +180,11 @@ public class InvoiceListener extends RetryableService implements InvoiceListener
                                                      }
                                                  } catch (final InvoiceApiException e) {
                                                      log.warn("Failed to generate invoice for accountRecordId='{}', event='{}'", event.getSearchKey1(), event.getClass().getSimpleName(), e);
-                                                     handleFailedInvoiceDispatch("AdjustParentInvoice", event.getSearchKey1(), event.getSearchKey2(), event.getUserToken(), e);
                                                  } catch (final AccountApiException e) {
-                                                     log.warn("Failed to generate invoice for accountRecordId='{}', event='{}'", event.getSearchKey1(), event.getClass().getSimpleName(), e);
-                                                     handleFailedInvoiceDispatch("AdjustParentInvoice", event.getSearchKey1(), event.getSearchKey2(), event.getUserToken(), e);
+                                                     // AccountApiException here means the account could not be fetched before invoicing; log with recordId as accountId is unavailable
+                                                     log.warn("Failed to generate invoice for accountRecordId='{}', event='{}', account does not seem to exist", event.getSearchKey1(), event.getClass().getSimpleName(), e);
                                                  } catch (final RuntimeException e) {
                                                      log.warn("Failed to generate invoice for accountRecordId='{}', event='{}'", event.getSearchKey1(), event.getClass().getSimpleName(), e);
-                                                     handleFailedInvoiceDispatch("AdjustParentInvoice", event.getSearchKey1(), event.getSearchKey2(), event.getUserToken(), e);
                                                      throw e;
                                                  }
                                              }
@@ -213,7 +203,6 @@ public class InvoiceListener extends RetryableService implements InvoiceListener
                                                      dispatcher.processSubscriptionStartRequestedDate(event, context);
                                                  } catch (final RuntimeException e) {
                                                      log.warn("Failed to generate invoice for accountRecordId='{}', event='{}'", event.getSearchKey1(), event.getClass().getSimpleName(), e);
-                                                     handleFailedInvoiceDispatch("SubscriptionBaseTransition", event.getSearchKey1(), event.getSearchKey2(), event.getUserToken(), e);
                                                      throw e;
                                                  }
                                              }
@@ -231,7 +220,6 @@ public class InvoiceListener extends RetryableService implements InvoiceListener
                                                              dispatcher.processAccountBCDChange(event.getAccountId(), context);
                                                          } catch (final RuntimeException e) {
                                                              log.warn("Failed to generate invoice for accountRecordId='{}', event='{}'", event.getSearchKey1(), event.getClass().getSimpleName(), e);
-                                                             handleFailedInvoiceDispatch("AccountBCDChange", event.getSearchKey1(), event.getSearchKey2(), event.getUserToken(), e);
                                                              throw e;
                                                          }
                                                          return;
@@ -358,18 +346,5 @@ public class InvoiceListener extends RetryableService implements InvoiceListener
         }
     }
 
-    private void handleFailedInvoiceDispatch(final String eventDescription, final Long accountRecordId,
-                                             final Long tenantRecordId, final UUID userToken, final Exception e) {
-        if (!invoiceConfig.isParkAccountsOnAllExceptions()) {
-            return;
-        }
-        try {
-            final InternalCallContext context = internalCallContextFactory.createInternalCallContext(tenantRecordId, accountRecordId, eventDescription, CallOrigin.INTERNAL, UserType.SYSTEM, userToken);
-            final UUID accountId = accountApi.getByRecordId(accountRecordId, context);
-            log.warn("Failed to generate invoice for accountId='{}', event='{}'", accountId, eventDescription, e);
-            parkedAccountsManager.parkAccount(accountId, context);
-        } catch (final Exception inner) {
-            log.warn("Unable to park account after invoice failure for accountRecordId='{}'", accountRecordId, inner);
-        }
-    }
 }
+

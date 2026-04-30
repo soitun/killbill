@@ -488,12 +488,21 @@ public class InvoiceDispatcher {
                 log.info("Invoice generation aborted by plugin for accountId='{}', targetDate='{}'", accountId, inputTargetDate);
                 return Collections.emptyList();
             }
-            // Only case where we park even if this is from an API call
+            log.warn("Failed to generate invoice for accountId='{}', dryRunArguments='{}'", accountId, dryRunArguments, e);
+            // Only case where we park even if this is from an API call and isParkAccountsOnAllExceptions is not explicitly set.
             if (e.getCode() == ErrorCode.UNEXPECTED_ERROR.getCode() && !isDryRun) {
+                parkAccount(accountId, context);
+            } else if (!isDryRun && !isApiCall && invoiceConfig.isParkAccountsOnAllExceptions(context)) {
                 parkAccount(accountId, context);
             }
             throw e;
-        } catch (final NoSuchNotificationQueue e) {
+        } catch (RuntimeException e) { // The case of LockFailedException was handled prior we enter this method.
+            log.warn("Failed to generate invoice for accountId='{}', dryRunArguments='{}'", accountId, dryRunArguments, e);
+            if (!isDryRun && !isApiCall && invoiceConfig.isParkAccountsOnAllExceptions(context)) {
+                parkAccount(accountId, context);
+            }
+            throw e;
+        } catch (final NoSuchNotificationQueue e) { /* Dry run use cases */
             throw new InvoiceApiException(ErrorCode.UNEXPECTED_ERROR, "Failed to retrieve future notifications from notificationQ");
         }
     }
