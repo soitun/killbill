@@ -472,6 +472,11 @@ public class InvoiceDispatcher {
             } else if (!isDryRun && !isApiCall && invoiceConfig.isParkAccountsOnAllExceptions(context)) {
                 parkAccount(accountId, context);
             }
+            // For non-API, non-dry-run paths the exception has been fully handled above (logged and parked if applicable).
+            // Rethrowing would only cause duplicate logging in the async callers that catch and swallow it anyway.
+            if (!isApiCall && !isDryRun) {
+                return Collections.emptyList();
+            }
             throw e;
         } catch (RuntimeException e) { // The case of LockFailedException was handled prior we enter this method.
             log.warn("Failed to generate invoice for accountId='{}', dryRunArguments='{}'", accountId, dryRunArguments, e);
