@@ -226,7 +226,8 @@ public class TestResource extends JaxRsResourceBase {
     @POST
     @Path("/invoices/{accountId:" + UUID_PATTERN + "}/log")
     @ApiOperation(value = "Emit invoice-related WARN/INFO log entries for the given account (for testing log alerting)")
-    @ApiResponses(value = {@ApiResponse(code = 400, message = "Unknown log entry type")})
+    @ApiResponses(value = {@ApiResponse(code = 204, message = "Successful operation"),
+                           @ApiResponse(code = 400, message = "Unknown log entry type")})
     public Response writeLogInvoiceLogEntriesForAccount(@PathParam("accountId") final UUID accountId,
                                                         @QueryParam("type") final String type,
                                                         @HeaderParam(HDR_CREATED_BY) final String createdBy,
