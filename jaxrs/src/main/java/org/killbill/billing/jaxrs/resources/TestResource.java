@@ -95,6 +95,7 @@ public class TestResource extends JaxRsResourceBase {
     // to the real ones (useful when validating log alerting / parsing rules).
     private static final Logger invoiceDispatcherLog = LoggerFactory.getLogger("org.killbill.billing.invoice.InvoiceDispatcher");
     private static final Logger parkedAccountsManagerLog = LoggerFactory.getLogger("org.killbill.billing.invoice.ParkedAccountsManager");
+    private static final String SUPPORTED_INVOICE_LOG_ENTRY_TYPES = "FAILED_GENERATE_BCD, FAILED_GENERATE_LOCK, FAILED_GENERATE_TARGET_DATE_LOCK, FAILED_GENERATE_DRY_RUN, FAILED_GENERATE_FUTURE_NOTIFICATION, FAILED_GENERATE_PARENT_LOCK, ABORTED_BY_PLUGIN, RESCHEDULED_BY_PLUGIN, UNABLE_TO_PARK, PARK_ACCOUNT, UNPARK_ACCOUNT";
     private static final int MILLIS_IN_SEC = 1000;
 
     private final PersistentBus persistentBus;
@@ -276,7 +277,7 @@ public class TestResource extends JaxRsResourceBase {
                 parkedAccountsManagerLog.warn("Unparking account for accountId='{}'", accountId);
                 break;
             default:
-                throw new IllegalArgumentException("Unknown invoice log entry type. Supported values are: FAILED_GENERATE_BCD, FAILED_GENERATE_LOCK, FAILED_GENERATE_TARGET_DATE_LOCK, FAILED_GENERATE_DRY_RUN, FAILED_GENERATE_FUTURE_NOTIFICATION, FAILED_GENERATE_PARENT_LOCK, ABORTED_BY_PLUGIN, RESCHEDULED_BY_PLUGIN, UNABLE_TO_PARK, PARK_ACCOUNT, UNPARK_ACCOUNT");
+                throw new IllegalArgumentException("Unknown invoice log entry type. Supported values are: " + SUPPORTED_INVOICE_LOG_ENTRY_TYPES);
         }
         return Response.status(Status.NO_CONTENT).build();
     }
