@@ -286,8 +286,6 @@ public class TestResource extends JaxRsResourceBase {
             case UNPARK_ACCOUNT:
                 parkedAccountsManagerLog.warn("Unparking account for accountId='{}'", accountId);
                 break;
-            default:
-                throw new IllegalArgumentException("Unknown invoice log entry type. Supported values are: " + Arrays.toString(InvoiceLogEntryType.values()));
         }
         return Response.status(Status.NO_CONTENT).build();
     }
