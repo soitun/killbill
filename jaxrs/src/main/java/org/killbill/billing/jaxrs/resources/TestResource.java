@@ -18,7 +18,9 @@
 
 package org.killbill.billing.jaxrs.resources;
 
+import java.util.Arrays;
 import java.util.Iterator;
+import java.util.UUID;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -26,9 +28,11 @@ import javax.servlet.ServletRequest;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
+import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Response;
@@ -88,7 +92,25 @@ import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 public class TestResource extends JaxRsResourceBase {
 
     private static final Logger log = LoggerFactory.getLogger(TestResource.class);
+    // Loggers named after the production classes so the test-generated entries look identical
+    // to the real ones (useful when validating log alerting / parsing rules).
+    private static final Logger invoiceDispatcherLog = LoggerFactory.getLogger("org.killbill.billing.invoice.InvoiceDispatcher");
+    private static final Logger parkedAccountsManagerLog = LoggerFactory.getLogger("org.killbill.billing.invoice.ParkedAccountsManager");
     private static final int MILLIS_IN_SEC = 1000;
+
+    private enum InvoiceLogEntryType {
+        FAILED_GENERATE_BCD,
+        FAILED_GENERATE_LOCK,
+        FAILED_GENERATE_TARGET_DATE_LOCK,
+        FAILED_GENERATE_DRY_RUN,
+        FAILED_GENERATE_FUTURE_NOTIFICATION,
+        FAILED_GENERATE_PARENT_LOCK,
+        ABORTED_BY_PLUGIN,
+        RESCHEDULED_BY_PLUGIN,
+        UNABLE_TO_PARK,
+        PARK_ACCOUNT,
+        UNPARK_ACCOUNT
+    }
 
     private final PersistentBus persistentBus;
     private final NotificationQueueService notificationQueueService;
@@ -216,7 +238,67 @@ public class TestResource extends JaxRsResourceBase {
         return getCurrentTime(timeZoneStr);
     }
 
+    @POST
+    @Path("/invoices/{accountId:" + UUID_PATTERN + "}/log")
+    @ApiOperation(value = "Emit invoice-related WARN/INFO log entries for the given account (for testing log alerting)")
+    @ApiResponses(value = {@ApiResponse(code = 204, message = "Successful operation"),
+                           @ApiResponse(code = 400, message = "Unknown log entry type")})
+    public Response writeLogInvoiceLogEntriesForAccount(@PathParam("accountId") final UUID accountId,
+                                                        @QueryParam("type") final String type,
+                                                        @HeaderParam(HDR_CREATED_BY) final String createdBy,
+                                                        @HeaderParam(HDR_REASON) final String reason,
+                                                        @HeaderParam(HDR_COMMENT) final String comment,
+                                                        @javax.ws.rs.core.Context final HttpServletRequest request) {
+        // Build a CallContext as other write endpoints do (kept for consistency / auditability of the test call).
+        context.createCallContextWithAccountId(accountId, createdBy, reason, comment, request);
 
+        final String normalized = type == null ? "unmatched" : type.trim().toUpperCase();
+        final InvoiceLogEntryType logEntryType;
+        try {
+            logEntryType = InvoiceLogEntryType.valueOf(normalized);
+        } catch (final IllegalArgumentException ignored) {
+            throw new IllegalArgumentException("Unknown invoice log entry type. Supported values are: " + Arrays.toString(InvoiceLogEntryType.values()));
+        }
+        final Exception sampleException = new RuntimeException("Sample exception emitted by TestResource");
+        final String sampleDryRunArgs = "null";
+
+        switch (logEntryType) {
+            case FAILED_GENERATE_BCD:
+                invoiceDispatcherLog.warn("Failed to generate invoice for accountId='{}', BCD change processing failed", accountId, sampleException);
+                break;
+            case FAILED_GENERATE_LOCK:
+                invoiceDispatcherLog.warn("Failed to generate invoice for accountId='{}', could not acquire lock", accountId, sampleException);
+                break;
+            case FAILED_GENERATE_TARGET_DATE_LOCK:
+                invoiceDispatcherLog.warn("Failed to generate invoice for accountId='{}', targetDate='{}', could not acquire lock", accountId, new LocalDate(clock.getUTCNow()), sampleException);
+                break;
+            case FAILED_GENERATE_DRY_RUN:
+                invoiceDispatcherLog.warn("Failed to generate invoice for accountId='{}', dryRunArguments='{}'", accountId, sampleDryRunArgs, sampleException);
+                break;
+            case FAILED_GENERATE_FUTURE_NOTIFICATION:
+                invoiceDispatcherLog.warn("Failed to generate invoice for accountId='{}', a future notification has NOT been recorded", accountId, sampleException);
+                break;
+            case FAILED_GENERATE_PARENT_LOCK:
+                invoiceDispatcherLog.warn("Failed to generate invoice for parentAccountId='{}', could not acquire lock", accountId.toString(), sampleException);
+                break;
+            case ABORTED_BY_PLUGIN:
+                invoiceDispatcherLog.info("Invoice generation aborted by plugin for accountId='{}', targetDate='{}'", accountId, new LocalDate(clock.getUTCNow()));
+                break;
+            case RESCHEDULED_BY_PLUGIN:
+                invoiceDispatcherLog.info("Invoice generation rescheduled by plugin for accountId='{}', targetDate='{}', rescheduled to '{}'", accountId, new LocalDate(clock.getUTCNow()), clock.getUTCNow().plusDays(1));
+                break;
+            case UNABLE_TO_PARK:
+                invoiceDispatcherLog.warn("Unable to park account", sampleException);
+                break;
+            case PARK_ACCOUNT:
+                parkedAccountsManagerLog.warn("Parking account for accountId='{}'", accountId);
+                break;
+            case UNPARK_ACCOUNT:
+                parkedAccountsManagerLog.warn("Unparking account for accountId='{}'", accountId);
+                break;
+        }
+        return Response.status(Status.NO_CONTENT).build();
+    }
 
     private boolean waitForNotificationToComplete(final ServletRequest request, final Long timeoutSec) {
         final TenantContext tenantContext = context.createTenantContextNoAccountId(request);
