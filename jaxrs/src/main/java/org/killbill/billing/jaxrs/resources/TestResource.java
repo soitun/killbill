@@ -225,7 +225,6 @@ public class TestResource extends JaxRsResourceBase {
 
     @POST
     @Path("/invoices/{accountId:" + UUID_PATTERN + "}/log")
-    @Produces(APPLICATION_JSON)
     @ApiOperation(value = "Emit invoice-related WARN/INFO log entries for the given account (for testing log alerting)")
     @ApiResponses(value = {@ApiResponse(code = 400, message = "Unknown log entry type")})
     public Response writeLogInvoiceLogEntriesForAccount(@PathParam("accountId") final UUID accountId,
@@ -241,7 +240,6 @@ public class TestResource extends JaxRsResourceBase {
         final Exception sampleException = new RuntimeException("Sample exception emitted by TestResource");
         final String sampleDryRunArgs = "null";
 
-        boolean matched = true;
         switch (normalized) {
             case "FAILED_GENERATE_BCD":
                 invoiceDispatcherLog.warn("Failed to generate invoice for accountId='{}', BCD change processing failed", accountId, sampleException);
@@ -277,16 +275,9 @@ public class TestResource extends JaxRsResourceBase {
                 parkedAccountsManagerLog.warn("Unparking account for accountId='{}'", accountId);
                 break;
             default:
-                matched = false;
-                break;
+                throw new IllegalArgumentException("Unknown invoice log entry type: " + type);
         }
-
-        if (!matched) {
-            return Response.status(Status.BAD_REQUEST)
-                           .entity("Unknown invoice log entry type: " + type)
-                           .build();
-        }
-        return Response.status(Status.OK).build();
+        return Response.status(Status.NO_CONTENT).build();
     }
 
     private boolean waitForNotificationToComplete(final ServletRequest request, final Long timeoutSec) {
