@@ -18,6 +18,7 @@
 
 package org.killbill.billing.jaxrs.resources;
 
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.UUID;
 
@@ -95,8 +96,11 @@ public class TestResource extends JaxRsResourceBase {
     // to the real ones (useful when validating log alerting / parsing rules).
     private static final Logger invoiceDispatcherLog = LoggerFactory.getLogger("org.killbill.billing.invoice.InvoiceDispatcher");
     private static final Logger parkedAccountsManagerLog = LoggerFactory.getLogger("org.killbill.billing.invoice.ParkedAccountsManager");
-    private static final String SUPPORTED_INVOICE_LOG_ENTRY_TYPES = "FAILED_GENERATE_BCD, FAILED_GENERATE_LOCK, FAILED_GENERATE_TARGET_DATE_LOCK, FAILED_GENERATE_DRY_RUN, FAILED_GENERATE_FUTURE_NOTIFICATION, FAILED_GENERATE_PARENT_LOCK, ABORTED_BY_PLUGIN, RESCHEDULED_BY_PLUGIN, UNABLE_TO_PARK, PARK_ACCOUNT, UNPARK_ACCOUNT";
     private static final int MILLIS_IN_SEC = 1000;
+
+    private enum InvoiceLogEntryType {
+        FAILED_GENERATE_BCD, FAILED_GENERATE_LOCK, FAILED_GENERATE_TARGET_DATE_LOCK, FAILED_GENERATE_DRY_RUN, FAILED_GENERATE_FUTURE_NOTIFICATION, FAILED_GENERATE_PARENT_LOCK, ABORTED_BY_PLUGIN, RESCHEDULED_BY_PLUGIN, UNABLE_TO_PARK, PARK_ACCOUNT, UNPARK_ACCOUNT
+    }
 
     private final PersistentBus persistentBus;
     private final NotificationQueueService notificationQueueService;
@@ -239,45 +243,51 @@ public class TestResource extends JaxRsResourceBase {
         context.createCallContextWithAccountId(accountId, createdBy, reason, comment, request);
 
         final String normalized = type == null ? "unmatched" : type.trim().toUpperCase();
+        final InvoiceLogEntryType logEntryType;
+        try {
+            logEntryType = InvoiceLogEntryType.valueOf(normalized);
+        } catch (final IllegalArgumentException ignored) {
+            throw new IllegalArgumentException("Unknown invoice log entry type. Supported values are: " + Arrays.toString(InvoiceLogEntryType.values()));
+        }
         final Exception sampleException = new RuntimeException("Sample exception emitted by TestResource");
         final String sampleDryRunArgs = "null";
 
-        switch (normalized) {
-            case "FAILED_GENERATE_BCD":
+        switch (logEntryType) {
+            case FAILED_GENERATE_BCD:
                 invoiceDispatcherLog.warn("Failed to generate invoice for accountId='{}', BCD change processing failed", accountId, sampleException);
                 break;
-            case "FAILED_GENERATE_LOCK":
+            case FAILED_GENERATE_LOCK:
                 invoiceDispatcherLog.warn("Failed to generate invoice for accountId='{}', could not acquire lock", accountId, sampleException);
                 break;
-            case "FAILED_GENERATE_TARGET_DATE_LOCK":
+            case FAILED_GENERATE_TARGET_DATE_LOCK:
                 invoiceDispatcherLog.warn("Failed to generate invoice for accountId='{}', targetDate='{}', could not acquire lock", accountId, new LocalDate(clock.getUTCNow()), sampleException);
                 break;
-            case "FAILED_GENERATE_DRY_RUN":
+            case FAILED_GENERATE_DRY_RUN:
                 invoiceDispatcherLog.warn("Failed to generate invoice for accountId='{}', dryRunArguments='{}'", accountId, sampleDryRunArgs, sampleException);
                 break;
-            case "FAILED_GENERATE_FUTURE_NOTIFICATION":
+            case FAILED_GENERATE_FUTURE_NOTIFICATION:
                 invoiceDispatcherLog.warn("Failed to generate invoice for accountId='{}', a future notification has NOT been recorded", accountId, sampleException);
                 break;
-            case "FAILED_GENERATE_PARENT_LOCK":
+            case FAILED_GENERATE_PARENT_LOCK:
                 invoiceDispatcherLog.warn("Failed to generate invoice for parentAccountId='{}', could not acquire lock", accountId.toString(), sampleException);
                 break;
-            case "ABORTED_BY_PLUGIN":
+            case ABORTED_BY_PLUGIN:
                 invoiceDispatcherLog.info("Invoice generation aborted by plugin for accountId='{}', targetDate='{}'", accountId, new LocalDate(clock.getUTCNow()));
                 break;
-            case "RESCHEDULED_BY_PLUGIN":
+            case RESCHEDULED_BY_PLUGIN:
                 invoiceDispatcherLog.info("Invoice generation rescheduled by plugin for accountId='{}', targetDate='{}', rescheduled to '{}'", accountId, new LocalDate(clock.getUTCNow()), clock.getUTCNow().plusDays(1));
                 break;
-            case "UNABLE_TO_PARK":
+            case UNABLE_TO_PARK:
                 invoiceDispatcherLog.warn("Unable to park account", sampleException);
                 break;
-            case "PARK_ACCOUNT":
+            case PARK_ACCOUNT:
                 parkedAccountsManagerLog.warn("Parking account for accountId='{}'", accountId);
                 break;
-            case "UNPARK_ACCOUNT":
+            case UNPARK_ACCOUNT:
                 parkedAccountsManagerLog.warn("Unparking account for accountId='{}'", accountId);
                 break;
             default:
-                throw new IllegalArgumentException("Unknown invoice log entry type. Supported values are: " + SUPPORTED_INVOICE_LOG_ENTRY_TYPES);
+                throw new IllegalArgumentException("Unknown invoice log entry type. Supported values are: " + Arrays.toString(InvoiceLogEntryType.values()));
         }
         return Response.status(Status.NO_CONTENT).build();
     }
